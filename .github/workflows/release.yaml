@@ -15,8 +15,8 @@ jobs:
         with:
           node-version: '20.x'
           scope: '@imdigital'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
       - run: npm install
       - run: npm run build
       - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
