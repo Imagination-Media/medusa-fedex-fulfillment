@@ -83,7 +83,6 @@ class FedexProviderService extends AbstractFulfillmentProviderService {
    * @returns {Promise<FulfillmentOption[]>}
    */
   async getFulfillmentOptions(): Promise<FulfillmentOption[]> {
-    console.log("Entrou no getFulfillmentOptions");
     try {
       return Object.entries(fedexMapping).map(([key, value]) => ({
         id: value,
@@ -280,8 +279,6 @@ class FedexProviderService extends AbstractFulfillmentProviderService {
           debug: this.options_.enableLogs
         }
       });
-
-      console.log(result);
 
       return result.shipment;
     } catch (error: any) {
