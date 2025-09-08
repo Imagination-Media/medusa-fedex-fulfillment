@@ -40,7 +40,6 @@
     "medusa-plugin",
     "medusa-v2",
     "medusa-plugin-integration",
-    "medusa-plugin-shipping",
     "fedex"
   ],
   "scripts": {
