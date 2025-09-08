@@ -13,7 +13,8 @@ export const getFulfillmentOptions = async (
     token: string,
     baseUrl: string,
     accountNumber: string,
-    logger?: Logger
+    logger?: Logger,
+    weightUnitOfMeasure: "LB" | "KG" = "LB"
 ): Promise<FedexShippingRate[]> => {
     const options: FedexShippingRate[] = []
 
@@ -46,7 +47,7 @@ export const getFulfillmentOptions = async (
             requestedPackageLineItems: [
                 {
                     weight: {
-                        units: "LB",
+                        units: weightUnitOfMeasure,
                         value: 1,
                     },
                 },

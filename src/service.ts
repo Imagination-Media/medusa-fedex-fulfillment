@@ -174,7 +174,7 @@ class FedexProviderService extends AbstractFulfillmentProviderService {
     const items: FedexRateRequestItem[] = context.items.map(
       (item: CartLineItemDTO & { variant?: ProductVariantDTO }) => ({
         weight: {
-          units: "LB",
+          units: this.options_.weightUnitOfMeasure || "LB",
           value: item.variant?.weight ? item.variant.weight : 1,
         },
       })
@@ -276,7 +276,8 @@ class FedexProviderService extends AbstractFulfillmentProviderService {
           items,
           order,
           fulfillment,
-          debug: this.options_.enableLogs
+          debug: this.options_.enableLogs,
+          weightUnitOfMeasure: this.options_.weightUnitOfMeasure
         }
       });
 

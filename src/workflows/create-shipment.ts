@@ -36,6 +36,7 @@ type WorkflowInput = {
   order: Partial<FulfillmentOrderDTO> | undefined;
   fulfillment: Partial<Omit<FulfillmentDTO, "provider_id" | "data" | "items">>;
   debug?: boolean;
+  weightUnitOfMeasure?: "LB" | "KG";
 };
 
 /**
@@ -153,7 +154,7 @@ const createFedexShipment = createStep(
       (item: FulfillmentItemDTO & { variant?: ProductVariantDTO }) => ({
         groupPackageCount: 1,
         weight: {
-          units: "LB",
+          units: input.weightUnitOfMeasure || "LB",
           value: item.variant?.weight ? item.variant.weight : 1,
         },
         dimensions: {
