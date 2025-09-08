@@ -20,7 +20,7 @@ export type FedexContact = {
 
 export type FedexRateRequestItem = {
     weight: {
-        units: "LB";
+        units: "LB" | "KG";
         value: number;
     };
     dimensions?: {
