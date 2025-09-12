@@ -121,6 +121,19 @@ To install the FedEx Fulfillment Integration, follow these steps:
   ]
 ```
 
+> **⚠️ Alternative:**  
+> **Alternatively, you can set up your FedEx API credentials directly in the Medusa Admin dashboard instead of the `medusa-config.ts` file.**  
+> Go to the **Settings** page in your Medusa Admin, and you will see **FedEx** listed in the menu.  
+> From there, you can enter your **Client ID**, **Client Secret**, and **Account Number** securely via the UI.
+
+<p align="center">
+  <img alt="FedEx Admin Settings" src="https://raw.githubusercontent.com/Imagination-Media/medusa-fedex-fulfillment/master/images/3.png" width="600"/>
+</p>
+
+> **How credentials are used:**  
+> The module will first check for credentials stored in the database (set via the Admin UI). If these exist, they will be used for all FedEx API requests.  
+> If no credentials are found in the database, the module will fall back to the credentials provided in your `medusa-config.ts` file.
+
 > **⚠️ WARNING:**  
 > The FedEx sandbox environment is frequently unavailable or down. If you encounter issues during testing, this is likely the cause.  
 > Check your logs for error messages indicating that the FedEx service is unavailable.

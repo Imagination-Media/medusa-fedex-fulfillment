@@ -21,6 +21,8 @@ import {
 import { getAuthToken } from "./fedex-api/auth"
 import { getShippingRates } from "./fedex-api/get-shipping-rates"
 import createFedexShipmentWorkflow from "./workflows/create-shipment"
+import getFedexCredentials from "./workflows/get-credentials"
+import { SetupCredentialsInput } from "./api/admin/fedex/route"
 
 type InjectedDependencies = {
   logger: Logger
@@ -41,7 +43,6 @@ class FedexProviderService extends AbstractFulfillmentProviderService {
 
   protected logger_: Logger
   protected options_: Options
-  protected baseUrl_: string
 
   /**
    * Create a new FedEx provider service.
@@ -52,7 +53,45 @@ class FedexProviderService extends AbstractFulfillmentProviderService {
     super()
     this.logger_ = logger
     this.options_ = options
-    this.baseUrl_ = this.options_.isSandbox
+  }
+
+  /**
+   * Get FedEx credentials.
+   * @returns {Promise<SetupCredentialsInput>}
+   */
+  async getCredentials(): Promise<SetupCredentialsInput> {
+    const { result, errors } = await getFedexCredentials()
+      .run({
+        input: {}
+      })
+
+    if ((errors && errors.length > 0)) {
+      this.logger_.error("Error getting FedEx credentials:" + JSON.stringify(errors, null, 2))
+    }
+
+    // If not provided in the admin we use from the options
+    if (!result || !result.account_number || !result.client_id || !result.client_secret) {
+      return {
+        client_id: this.options_.clientId,
+        client_secret: this.options_.clientSecret,
+        account_number: this.options_.accountNumber,
+        is_sandbox: this.options_.isSandbox,
+        enable_logs: this.options_.enableLogs,
+        weight_unit_of_measure: this.options_.weightUnitOfMeasure as ("LB" | "KG"),
+        is_enabled: this.options_.isEnabled
+      }
+    }
+
+    return result
+  }
+
+  /**
+   * Get the base URL for the FedEx API.
+   * @param isSandbox - Whether to use the sandbox environment.
+   * @returns The base URL for the FedEx API.
+   */
+  getBaseUrl(isSandbox: boolean): string {
+    return isSandbox
       ? "https://apis-sandbox.fedex.com"
       : "https://apis.fedex.com"
   }
@@ -62,20 +101,8 @@ class FedexProviderService extends AbstractFulfillmentProviderService {
    * @returns {Promise<boolean>}
    */
   async canCalculate(): Promise<boolean> {
-    if (
-      this.options_.weightUnitOfMeasure &&
-      this.options_.weightUnitOfMeasure !== "LB" &&
-      this.options_.weightUnitOfMeasure !== "KG"
-    ) {
-      this.logger_.error(
-        `Invalid weight unit of measure: ${this.options_.weightUnitOfMeasure}`
-      )
-      return false
-    } else if (!this.options_.weightUnitOfMeasure) {
-      this.options_.weightUnitOfMeasure = "LB" // Default to pounds if not specified
-    }
-
-    return this.options_.isEnabled
+    const credentials = await this.getCredentials()
+    return credentials.is_enabled && !!(credentials.client_id && credentials.client_secret && credentials.account_number)
   }
 
   /**
@@ -109,13 +136,16 @@ class FedexProviderService extends AbstractFulfillmentProviderService {
     data: CalculateShippingOptionPriceDTO["data"],
     context: CalculateShippingOptionPriceDTO["context"]
   ): Promise<CalculatedShippingOptionPrice> {
+    const credentials = await this.getCredentials()
+    const baseUrl = this.getBaseUrl(credentials.is_sandbox)
+
     const token = await getAuthToken(
-      this.baseUrl_,
-      this.options_.clientId,
-      this.options_.clientSecret
+      baseUrl,
+      credentials.client_id,
+      credentials.client_secret
     )
-    const baseUrl = this.baseUrl_
-    const accountNumber = this.options_.accountNumber
+
+    const accountNumber = credentials.account_number
 
     if (!context.items || context.items.length === 0) {
       throw new Error("Cart is empty")
@@ -174,7 +204,7 @@ class FedexProviderService extends AbstractFulfillmentProviderService {
     const items: FedexRateRequestItem[] = context.items.map(
       (item: CartLineItemDTO & { variant?: ProductVariantDTO }) => ({
         weight: {
-          units: this.options_.weightUnitOfMeasure!,
+          units: credentials.weight_unit_of_measure,
           value: item.variant?.weight ? item.variant.weight : 1,
         },
       })
@@ -187,7 +217,7 @@ class FedexProviderService extends AbstractFulfillmentProviderService {
       originAddress,
       destinationAddress,
       items,
-      this.options_.enableLogs ? this.logger_ : undefined
+      credentials.enable_logs ? this.logger_ : undefined
     )
 
     // Find matching rate
@@ -218,18 +248,6 @@ class FedexProviderService extends AbstractFulfillmentProviderService {
     data: Record<string, unknown>,
     context: ValidateFulfillmentDataContext
   ): Promise<boolean> {
-    if (this.options_.enableLogs) {
-      this.logger_.info(
-        `Validating fulfillment data for option: ${JSON.stringify(
-          optionData,
-          null,
-          2
-        )}`
-      )
-      this.logger_.info(`With data: ${JSON.stringify(data, null, 2)}`)
-      this.logger_.info(`With context: ${JSON.stringify(context, null, 2)}`)
-    }
-
     // Nothing to review and approve for now
     return Promise.resolve(true)
   }
@@ -250,13 +268,16 @@ class FedexProviderService extends AbstractFulfillmentProviderService {
       Omit<FulfillmentDTO, "provider_id" | "data" | "items">
     >
   ): Promise<CreateFulfillmentResult> {
+    const credentials = await this.getCredentials()
+    const baseUrl = this.getBaseUrl(credentials.is_sandbox)
+
     const token = await getAuthToken(
-      this.baseUrl_,
-      this.options_.clientId,
-      this.options_.clientSecret
+      baseUrl,
+      credentials.client_id,
+      credentials.client_secret
     )
-    const baseUrl = this.baseUrl_
-    const accountNumber = this.options_.accountNumber
+
+    const accountNumber = credentials.account_number
 
     try {
       const locationId = fulfillment.location_id
@@ -276,8 +297,8 @@ class FedexProviderService extends AbstractFulfillmentProviderService {
           items,
           order,
           fulfillment,
-          debug: this.options_.enableLogs,
-          weightUnitOfMeasure: this.options_.weightUnitOfMeasure!
+          debug: credentials.enable_logs,
+          weightUnitOfMeasure: credentials.weight_unit_of_measure!
         }
       });
 
